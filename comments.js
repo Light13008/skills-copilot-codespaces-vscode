@@ -1,51 +1,59 @@
-// create a web server
+// Create web server 
+
+// Import modules
 const express = require('express');
-const app = express();
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
 
-// Define the path for comments.json
-const commentsPath = path.join(__dirname, 'comments.json');
-
-// Check if comments.json exists, if not create it
-if (!fs.existsSync(commentsPath)) {
-    fs.writeFileSync(commentsPath, JSON.stringify([])); // Initialize with an empty array
-}
-
-let comments = require(commentsPath); // Load the comments
-
+// Create web server
+const app = express();
 const port = 3000;
 
-// Middleware
+// Use body-parser
 app.use(bodyParser.json());
-app.use(express.static('public'));
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// Set static folder
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Get comments
 app.get('/comments', (req, res) => {
-    res.json(comments);
-});
-
-// Post a new comment
-app.post('/comments', (req, res) => {
-    const newComment = req.body;
-
-    // Basic validation (you can expand this as needed)
-    if (!newComment || !newComment.text) {
-        return res.status(400).send('Comment text is required');
-    }
-
-    comments.push(newComment);
-    fs.writeFile(commentsPath, JSON.stringify(comments, null, 2), (err) => {
+    fs.readFile('comments.json', 'utf8', (err, data) => {
         if (err) {
-            return res.status(500).send('Error saving comment');
+            res.status(500).send('Internal Server Error');
         } else {
-            return res.status(201).send('Comment saved');
+            res.send(data);
         }
     });
 });
 
-// Start the server
-app.listen(port, () => {
-    console.log(`Server listening on port ${port}`);
+// Post comments
+app.post('/comments', (req, res) => {
+    fs.readFile('comments.json', 'utf8', (err, data) => {
+        if (err) {
+            res.status(500).send('Internal Server Error');
+        } else {
+            const comments = JSON.parse(data);
+            comments.push(req.body);
+            fs.writeFile('comments.json', JSON.stringify(comments), (err) => {
+                if (err) {
+                    res.status(500).send('Internal Server Error');
+                } else {
+                    res.send('Success');
+                }
+            });
+        }
+    });
 });
+
+// Start web server
+app.listen(port, () => {
+    console.log(`Server is running on http://localhost:${port}`);
+});
+// In this snippet, we have created a web server using Express. We have added two routes: GET /comments and POST /comments. The GET route reads comments from a file called comments.json and sends them as a response. The POST route reads comments from the file, adds the new comment from the request body, and writes the updated comments back to the file.
+
+// This is a simple example of how to create a web server that handles comments. You can extend this example to add more features like editing comments, deleting comments, etc. You can also add authentication and authorization to secure the comments API.
+
+
+
